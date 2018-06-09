@@ -293,23 +293,24 @@ class GithubHistory(object):
 
         :param repo: class 'github.Repository.Repository'
         :param issue: class 'github.Issue.Issue'
-        :param changes: string
+        :param changes: string, eg: '2018-02-15T09:17:49Z'
 
         '''
         self.log.debug('fun : get comments')
 
         self.check_rate_limit()
 
+        # converting issue obj to raw dict as iss_dict
         iss_dict = self.get_raw_data(issue)
 
-        # by default,get the msgs present from issue created time
+        # get issue created time in '%d/%m/%Y' as last_time
         last_time = self.get_time(iss_dict['created_at'])
 
-        # In case issue has updated,but those msgs are not stored then get the msgs from new updated time
+        # In case there are changes in issue,replace the last_time
         if changes:
             last_time = self.get_time(changes)
 
-        # get and store the comments from since issue created or last issue updated time
+        # get and store the comments since issue created or last issue comment updated time(in case of new comments)
         for comment in issue.get_comments(since=last_time):
             self.store_record(repo, issue, comment)
 
@@ -327,17 +328,20 @@ class GithubHistory(object):
         self.check_rate_limit()
         for issue in repo.get_issues():
 
+            # getting issue dict from issue obj as iss
             iss = self.get_issue_dict(issue)
-            # passing the issue dict and checking in db for issue related records(count) 
-            # and changes(checking whether the current issue updated time is matching with last comment updated time)
+            
+            # passing the issue dict and checking in db for issue related records and changes
+            # returns (count as 0 or 1),(changes as 0 or time in '2018-02-15T09:17:49Z' format)
             count, changes = self.store.check_issue_in_db(iss)
 
-            # if no records found realted to issue in db,get all the comments
+            # if no records and no changes found realted to issue in db,then get all the comments
             if count is 0:
                 self.get_comments(repo, issue)
+                continue
 
             # if records present in db,but the current issue updated time not matched with the last comment
-            # updated time in db,so get the msgs from last updated time of the comment.
+            # updated time in db,so get the msgs from last comment updated time.
             if changes:
                 self.get_comments(repo, issue, changes)
 
@@ -352,17 +356,21 @@ class GithubHistory(object):
 
         for repo in self.get_repos_list():
 
+            # if repo doesn't contain any issues just store the record
             if repo.open_issues is 0:
                 self.store_record(repo)
                 continue
-
+                
+            # get the issues related to the repo 
             self.get_issues(repo)
 
+            # store the status in disk dict
             self.dd['repository'] = repo.full_name
 
     def start(self):
         self.log.debug('fun : start')
 
+        # create db obj at 0th index from target
         self.store = self.targets[0]
 
         if 'repository' not in self.dd.keys():
