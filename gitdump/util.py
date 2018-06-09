@@ -12,9 +12,7 @@ def memoize(f):
 @memoize
 def load_object(imp_path):
     '''
-    Given a path (python import path), load the object.
-    eg of path: logagg.formatters.nginx_access
-              : logagg.forwarders.mongodb
+    Given a path (python import path), load the object
     '''
     module_name, obj_name = imp_path.split('.', 1)
     module = __import__(module_name)
