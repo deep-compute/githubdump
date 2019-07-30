@@ -14,25 +14,30 @@ DUMMY_LOG = Dummy()
 
 class GithubHistory(object):
 
-    '''
+    """
     This is the main class you instantiate to access the Github API v3 and store all msgs in the db.
 
-    '''
+    """
 
-    def __init__(self, auth_token=None, repos=None,
-                 status_path='/tmp/', targets=None,
-                 log=DUMMY_LOG):
+    def __init__(
+        self,
+        auth_token=None,
+        repos=None,
+        status_path="/tmp/",
+        targets=None,
+        log=DUMMY_LOG,
+    ):
 
         self.git = Github(auth_token)
         self.log = log
         self.repos = repos
         self.targets = targets
         self.store = None
-        self.dd = DiskDict(status_path + 'disk.dict')
+        self.dd = DiskDict(status_path + "disk.dict")
         self._pool = ThreadPool()
 
     def get_repo_obj(self, repo_fullname):
-        '''
+        """
         :params repo_fullname : string
         :rtype: :class:`github.Repository.Repository`
 
@@ -40,13 +45,13 @@ class GithubHistory(object):
         >>> obj.get_repo_obj('org/reponame')
         Repository(full_name=None)
 
-        '''
-        self.log.debug('fun : get repo obj')
+        """
+        self.log.debug("fun : get repo obj")
 
         return self.git.get_repo(str(repo_fullname))
 
     def get_repos_list(self):
-        '''
+        """
         :rtype: :class:`github.PaginatedList.PaginatedList` of :class:`github.Repository.Repository`
         or
         :rtype: [class:`github.Repository.Repository`,..]
@@ -58,16 +63,16 @@ class GithubHistory(object):
         >>> obj.get_repos_list()
         [Repository(full_name=None), Repository(full_name=None)]
 
-        '''
-        self.log.debug('fun : get repos list')
+        """
+        self.log.debug("fun : get repos list")
 
         if self.repos:
-            return [self.get_repo_obj(repo) for repo in self.repos.split(',')]
+            return [self.get_repo_obj(repo) for repo in self.repos.split(",")]
 
         return self.git.get_user().get_repos()
 
     def get_raw_data(self, obj):
-        '''
+        """
         Gets raw json from the obj
 
         :param obj: class github
@@ -80,15 +85,15 @@ class GithubHistory(object):
         >>> obj.get_raw_data(test())
         {'id': '123456'}
 
-        '''
-        self.log.debug('fun : get raw data')
+        """
+        self.log.debug("fun : get raw data")
 
         for key, value in obj.__dict__.items():
-            if key is '_rawData':
+            if key is "_rawData":
                 return value
 
     def merge_dict(self, *args):
-        '''
+        """
         :params args: dict
         :rtype: dict
 
@@ -96,13 +101,13 @@ class GithubHistory(object):
         >>> obj.merge_dict({'a':1,'b':2},{'c':3,'d':4})
         {'a': 1, 'c': 3, 'b': 2, 'd': 4}
 
-        '''
-        self.log.debug('fun : chain dict or merge dict')
+        """
+        self.log.debug("fun : chain dict or merge dict")
 
         return dict(ChainMap(*args))
 
     def get_key(self, record):
-        '''
+        """
         :params record: dict
         :rtype: dict
 
@@ -112,32 +117,34 @@ class GithubHistory(object):
         >>> obj.get_key({'repository':{'updated_at':'21-04-14'},'issue':{},'comment':{}})
         {'id': '8acfc9c43a5c9f64ee2070007591811f4048c907'}
 
-        '''
-        self.log.debug('fun : get hash key')
+        """
+        self.log.debug("fun : get hash key")
 
-        key = '%s%s%s' % (record.get('repository', {}).get('updated_at', 0),
-                          record.get('issue', {}).get('updated_at', 0),
-                          record.get('comment', {}).get('updated_at', 0))
+        key = "%s%s%s" % (
+            record.get("repository", {}).get("updated_at", 0),
+            record.get("issue", {}).get("updated_at", 0),
+            record.get("comment", {}).get("updated_at", 0),
+        )
 
-        #TODO: Need to add repo id
-        return {'id': hashlib.sha1(key).hexdigest()}
+        # TODO: Need to add repo id
+        return {"id": hashlib.sha1(key).hexdigest()}
 
     def send_msgs_to_target(self, target, msg):
-        '''
+        """
         :param target: db obj
         :param msg: dict
 
-        '''
-        self.log.debug('send msgs to tatgets')
+        """
+        self.log.debug("send msgs to tatgets")
 
         target.insert_msg(msg)
 
     def write_message(self, msg):
-        '''
+        """
         :param msg: dict
 
-        '''
-        self.log.debug('write msgs in db')
+        """
+        self.log.debug("write msgs in db")
 
         if self.targets:
             fn = self.send_msgs_to_target
@@ -150,7 +157,7 @@ class GithubHistory(object):
                 j.wait()
 
     def store_record(self, repo, issue=None, comment=None):
-        '''
+        """
         :param repo:    class 'github.Repository.Repository'
         :param issue:   class 'github.Issue.Issue'
         :param comment: class 'github.IssueComment.IssueComment'
@@ -170,8 +177,8 @@ class GithubHistory(object):
         >>> obj.store_record(repo(), issue(), comment())
         {'comment': {'id': 91011}, 'issue': {'id': 5678}, 'id': '8aefb06c426e07a0a671a1e2488b4858d694a730', 'repository': {'id': 1234}}
 
-        '''
-        self.log.debug('fun : store record')
+        """
+        self.log.debug("fun : store record")
 
         iss = cmnt = {}
         rp = self.get_repo_dict(repo)
@@ -189,7 +196,7 @@ class GithubHistory(object):
         return record
 
     def get_repo_dict(self, repo):
-        '''
+        """
         :param repo: class 'github.Repository.Repository'
         :rtype: dict
 
@@ -208,20 +215,20 @@ class GithubHistory(object):
         >>> obj.get_repo_dict(repo())
         {'organization': {'id': '12345'}, 'repository': {'id': '12345', 'name': 'abcd'}}
 
-        '''
-        self.log.debug('fun : get repo dict')
+        """
+        self.log.debug("fun : get repo dict")
 
         org_dict = {}
 
-        if repo.owner.type == 'Organization':
+        if repo.owner.type == "Organization":
             org = self.git.get_organization(str(repo.owner.login))
-            org_dict = {'organization': self.get_raw_data(org)}
+            org_dict = {"organization": self.get_raw_data(org)}
 
-        repo_dict = {'repository': self.get_raw_data(repo)}
+        repo_dict = {"repository": self.get_raw_data(repo)}
         return self.merge_dict(org_dict, repo_dict)
 
     def get_issue_dict(self, issue):
-        '''
+        """
         :param issue: class 'github.Issue.Issue'
         :rtype: dict
 
@@ -233,13 +240,13 @@ class GithubHistory(object):
         >>> obj.get_issue_dict(issue())
         {'issue': {'id': 123456}}
 
-        '''
-        self.log.debug('fun : get issue dict')
+        """
+        self.log.debug("fun : get issue dict")
 
-        return {'issue': self.get_raw_data(issue)}
+        return {"issue": self.get_raw_data(issue)}
 
     def get_time(self, _time):
-        '''
+        """
         :param _time: string
         :rtype: datetime.datetime
 
@@ -247,13 +254,13 @@ class GithubHistory(object):
         >>> obj.get_time('2018-02-15T09:17:49Z')
         datetime.datetime(2018, 2, 15, 9, 17, 50)
 
-        '''
-        self.log.debug('fun : get api time format')
+        """
+        self.log.debug("fun : get api time format")
 
-        return datetime.strptime(_time, '%Y-%m-%dT%H:%M:%SZ') + timedelta(seconds=1)
+        return datetime.strptime(_time, "%Y-%m-%dT%H:%M:%SZ") + timedelta(seconds=1)
 
     def get_comment_dict(self, cmnt):
-        '''
+        """
         :param cmnt:class 'github.IssueComment.IssueComment'
         :rtype: dict
 
@@ -265,38 +272,37 @@ class GithubHistory(object):
         >>> obj.get_comment_dict(comment())
         {'comment': {'id': 123456}}
 
-        '''
-        self.log.debug('fun : get comment dict')
+        """
+        self.log.debug("fun : get comment dict")
 
-        return {'comment': self.get_raw_data(cmnt)}
+        return {"comment": self.get_raw_data(cmnt)}
 
     def check_rate_limit(self):
-        '''
+        """
         Checks no of api calls remaining before going to any function
         if remaining calls of range less than 100 calls wait for some time.
 
-        '''
-        self.log.debug('fun :check api rate limit')
+        """
+        self.log.debug("fun :check api rate limit")
 
         remaining, total = self.git.rate_limiting
 
         if remaining > 1 and remaining < 100:
             expiry = self.git.rate_limiting_resettime
             delay = (expiry - time.time()) + 60
-            self.log.info('waiting for ' + str(delay) + ' sec')
+            self.log.info("waiting for " + str(delay) + " sec")
             time.sleep(delay)
 
-
     def get_comments(self, repo, issue, changes=None):
-        '''
+        """
         Get comments related to the issue
 
         :param repo: class 'github.Repository.Repository'
         :param issue: class 'github.Issue.Issue'
         :param changes: string, eg: '2018-02-15T09:17:49Z'
 
-        '''
-        self.log.debug('fun : get comments')
+        """
+        self.log.debug("fun : get comments")
 
         self.check_rate_limit()
 
@@ -304,7 +310,7 @@ class GithubHistory(object):
         iss_dict = self.get_raw_data(issue)
 
         # get issue created time in '%d/%m/%Y' as last_time
-        last_time = self.get_time(iss_dict['created_at'])
+        last_time = self.get_time(iss_dict["created_at"])
 
         # In case there are changes in issue,replace the last_time
         if changes:
@@ -317,20 +323,20 @@ class GithubHistory(object):
         self.store_record(repo, issue)
 
     def get_issues(self, repo):
-        '''
+        """
         Get issues related to the input Repository
 
         :param repo: class 'github.Repository.Repository'
 
-        '''
-        self.log.debug('fun : get issues')
+        """
+        self.log.debug("fun : get issues")
 
         self.check_rate_limit()
         for issue in repo.get_issues():
 
             # getting issue dict from issue obj as iss
             iss = self.get_issue_dict(issue)
-            
+
             # passing the issue dict and checking in db for issue related records and changes
             # returns (count as 0 or 1),(changes as 0 or time in '2018-02-15T09:17:49Z' format)
             count, changes = self.store.check_issue_in_db(iss)
@@ -346,13 +352,13 @@ class GithubHistory(object):
                 self.get_comments(repo, issue, changes)
 
     def get_history(self):
-        '''
+        """
         Get user's account repos and from that iterate over issues and comments.
         get_history
            -> repos -> issues -> comments
 
-        '''
-        self.log.debug('fun : get history')
+        """
+        self.log.debug("fun : get history")
 
         for repo in self.get_repos_list():
 
@@ -360,23 +366,23 @@ class GithubHistory(object):
             if repo.open_issues is 0:
                 self.store_record(repo)
                 continue
-                
-            # get the issues related to the repo 
+
+            # get the issues related to the repo
             self.get_issues(repo)
 
             # store the status in disk dict
-            self.dd['repository'] = repo.full_name
+            self.dd["repository"] = repo.full_name
 
     def start(self):
-        self.log.debug('fun : start')
+        self.log.debug("fun : start")
 
         # create db obj at 0th index from target
         self.store = self.targets[0]
 
-        if 'repository' not in self.dd.keys():
+        if "repository" not in self.dd.keys():
             self.get_history()
 
         # recheck for new messages
         self.get_history()
 
-        self.log.info('Messages stored successfully')
+        self.log.info("Messages stored successfully")
