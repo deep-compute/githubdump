@@ -12,7 +12,6 @@ from githubhistory import GithubHistory
 
 
 class RequestHandler(tornado.web.RequestHandler):
-
     def post(self):
         data = json.loads(self.request.body)
 
@@ -24,14 +23,15 @@ class RequestHandler(tornado.web.RequestHandler):
         git.write_message(record)
 
         log = self.application.log
-        log.info('Github webhooks key', msg_id=record['id'])
+        log.info("Github webhooks key", msg_id=record["id"])
+
 
 class GithubWebhookScript(BaseScript):
 
     DESC = "A tool to get the data from github and store it in mongodb"
 
     def _parse_msg_target_arg(self, t):
-        '''
+        """
         :param t : str
         :rtype : str, dict
 
@@ -40,18 +40,18 @@ class GithubWebhookScript(BaseScript):
         return
              path = githubdump.messagestore.SQLiteStore
              args = {'db_name': 'github_sqlite', 'table_name': 'github_dump_sqlite'}
-        '''
-        self.log.debug('fun : parse msg target arguments')
+        """
+        self.log.debug("fun : parse msg target arguments")
 
-        path, args = t.split(':', 1)
-        path = path.split('=')[1]
-        args = dict(a.split('=', 1) for a in args.split(':'))
-        args['log'] = self.log
+        path, args = t.split(":", 1)
+        path = path.split("=")[1]
+        args = dict(a.split("=", 1) for a in args.split(":"))
+        args["log"] = self.log
 
         return path, args
 
     def msg_store(self):
-        self.log.debug('fun : msg store')
+        self.log.debug("fun : msg store")
 
         targets = []
         for t in self.args.target:
@@ -63,7 +63,7 @@ class GithubWebhookScript(BaseScript):
         return targets
 
     def run(self):
-        self.log.debug('fun : run')
+        self.log.debug("fun : run")
 
         th = threading.Thread(target=self.get_git_obj().start)
         th.daemon = True
@@ -72,50 +72,73 @@ class GithubWebhookScript(BaseScript):
         self.listen_realtime()
 
     def listen_realtime(self):
-        self.log.debug('fun : tornodo listen')
+        self.log.debug("fun : tornodo listen")
 
-        self.log.info('Running tornodo on the machine')
-        app = tornado.web.Application(handlers=[(r'/', RequestHandler)])
+        self.log.info("Running tornodo on the machine")
+        app = tornado.web.Application(handlers=[(r"/", RequestHandler)])
         app.log = self.log
         http_server = tornado.httpserver.HTTPServer(app)
         http_server.listen(self.args.tornodo_port)
         tornado.ioloop.IOLoop.instance().start()
 
     def get_git_obj(self):
-        self.log.debug('fun : get git obj')
+        self.log.debug("fun : get git obj")
 
         targets = self.msg_store()
-        return GithubHistory(auth_token=self.args.access_token,
-                             repos=self.args.repos_list,
-                             status_path=self.args.status_path,
-                             targets=targets, log=self.log)
+        return GithubHistory(
+            auth_token=self.args.access_token,
+            repos=self.args.repos_list,
+            status_path=self.args.status_path,
+            targets=targets,
+            log=self.log,
+        )
 
     def define_args(self, parser):
         # github arguments
-        parser.add_argument('-auth', '--access_token',
-                            metavar='usr_access_token',required=True,
-                            help='access token to authenticate github account')
-        parser.add_argument('-repos', '--repos_list',
-                            metavar='repositories', nargs='?',
-                            default=None,
-                            help='repos to be stored in the db')
+        parser.add_argument(
+            "-auth",
+            "--access_token",
+            metavar="usr_access_token",
+            required=True,
+            help="access token to authenticate github account",
+        )
+        parser.add_argument(
+            "-repos",
+            "--repos_list",
+            metavar="repositories",
+            nargs="?",
+            default=None,
+            help="repos to be stored in the db",
+        )
         # diskdict arguments
-        parser.add_argument('-status_path', '--status_path',
-                            metavar='status_path', default=None,
-                            help='File path where the status of gmail \
-                            messages needs to be stored.')
+        parser.add_argument(
+            "-status_path",
+            "--status_path",
+            metavar="status_path",
+            default=None,
+            help="File path where the status of gmail \
+                            messages needs to be stored.",
+        )
 
         # database arguments
-        parser.add_argument('-target', '--target', nargs='+',
-                help='format for Mongo: store=<MongoStore-classpath>:db_name=<database-name>:collection_name=<collection-name> \
-                format for SQLite: store=<SQLiteStore-classpath>:host=<hostname>:port=<port-number>:db_name=<db-name>:table_name=<table-name>"')
+        parser.add_argument(
+            "-target",
+            "--target",
+            nargs="+",
+            help='format for Mongo: store=<MongoStore-classpath>:db_name=<database-name>:collection_name=<collection-name> \
+                format for SQLite: store=<SQLiteStore-classpath>:host=<hostname>:port=<port-number>:db_name=<db-name>:table_name=<table-name>"',
+        )
 
         # tornodo arguments
-        parser.add_argument('-tp', '--tornodo_port', metavar='tornodo_port',
-                            nargs='?', default=5000,
-                            help='port in which tornodo needs to run')
+        parser.add_argument(
+            "-tp",
+            "--tornodo_port",
+            metavar="tornodo_port",
+            nargs="?",
+            default=5000,
+            help="port in which tornodo needs to run",
+        )
+
 
 def main():
     GithubWebhookScript().start()
-
-
